@@ -228,6 +228,7 @@ function getTimeUntilDraw(collector) {
 async function getPaginatedCardInformation(collectorId, page) {
     // Get possessions with the collector's ID.
     let possessions = await getPossessions();
+    possessions = possessions.filter(possession => possession.collectorId == collectorId);
 
     // Get the cards referenced in the possessions.
     let cards = await getCards();
@@ -295,6 +296,7 @@ async function collectorHasCards(collectorId) {
 async function getPages(collectorId) {
     // Get possessions with the collector's ID.
     let possessions = await getPossessions();
+    possessions = possessions.filter(possession => possession.collectorId == collectorId);
 
     // Get the cards referenced in the possessions.
     let cards = await getCards();
