@@ -233,16 +233,18 @@ async function getPaginatedCardInformation(collectorId, page) {
     let cards = await getCards();
     cards = possessions.map(possession => cards.find(card => card.id == possession.cardId));
 
-    // Determine number of pages.
-    let uniqueCards = cards.filter(card => {
-        let firstOccurrence = cards.find(x => x.number == card.number);
-        return card == firstOccurrence;
+    // Make an array of unique cards.
+    let uniqueCards = cards.filter((value, index, self) => {
+        let firstOccurence = self.find(card => card.number == value.number);
+        return self.indexOf(firstOccurence) === index;
+    });
+    
+    uniqueCards = uniqueCards.sort((a, b) => {
+        return a.number - b.number;
     });
 
-    const cardsPerPage = settings.cardsPerPage;
-    let pages = Math.ceil(uniqueCards.length / cardsPerPage);
-
     // Get a subset of the cards determined by pagination.
+    const cardsPerPage = settings.cardsPerPage;
     uniqueCards = uniqueCards.slice(page * cardsPerPage, (page + 1) * cardsPerPage);
 
     // Attach card sets to each card.
@@ -267,7 +269,7 @@ async function getPaginatedCardInformation(collectorId, page) {
 
     function attachCardSet(cardSets, card) {
         let cardSet = cardSets.find(cardSet => cardSet.id == card.cardSetId);
-        card.cardSet = cardSet;
+        card.cardSet = cardSet.name;
         return card;
     }
 
@@ -278,8 +280,9 @@ async function getPaginatedCardInformation(collectorId, page) {
     }
 
     function hasFoil(cards, number) {
-        let filteredCards = cards.filter(card => cards.number == number && card.isFoil);
-        return filteredCards && filteredCards.length;
+        let foilCard = cards.find(card => card.number == number && card.isFoil);
+        if (foilCard) return true;
+        else return false;
     }
 }
 
@@ -297,12 +300,13 @@ async function getPages(collectorId) {
     let cards = await getCards();
     cards = possessions.map(possession => cards.find(card => card.id == possession.cardId));
 
-    // Determine number of pages.
-    let uniqueCards = cards.filter(card => {
-        let firstOccurrence = cards.find(x => x.number == card.number);
-        return card == firstOccurrence;
+    // Make an array of unique cards.
+    let uniqueCards = cards.filter((value, index, self) => {
+        let firstOccurence = self.find(card => card.number == value.number);
+        return self.indexOf(firstOccurence) === index;
     });
 
+    // Determine number of pages.
     let pages = Math.ceil(uniqueCards.length / settings.cardsPerPage);
 
     // Return number of pages.

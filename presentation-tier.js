@@ -20,7 +20,7 @@ function onGuildCreate(guild) {
 
     // Send a greeting.
     channel.send('Hi! :sunflower: I\'m Carmcards, a Carmilla bot by Ester Olsen.');
-    channel.send(`<@${client.user.id}> help`);
+    channel.send(`<@${index.client.user.id}> help`);
 
     function getChannel() {
         let channels = guild.channels.array();
@@ -265,7 +265,7 @@ function help(message) {
 function isValidMessage(message) {
     // Check if the user is a bot, or if it's a message from this bot to itself.
     if (message.author.bot) {
-        if (message.user.id != index.client.user.id) {
+        if (message.author.id != index.client.user.id) {
             return false;
         }
     }

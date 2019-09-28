@@ -7,6 +7,7 @@ const settings = require('./settings.json');
 // Exports
 module.exports.connection = mysql.createConnection({
     host: settings.connection.host,
+    port: settings.connection.port,
     database: settings.connection.database,
     user: settings.connection.user,
     password: settings.connection.password,
@@ -14,10 +15,27 @@ module.exports.connection = mysql.createConnection({
 
 module.exports.client = new discord.Client();
 
-// Connect to database.
-module.exports.connection.connect(error => { if (error) throw error; });
+// Start
+start();
 
-// Login to Discord.
-module.exports.client.on('guildCreate', guild => presentationTier.onGuildCreate(guild));
-module.exports.client.on('message', message => presentationTier.onMessage(message));
-module.exports.client.login(settings.token);
+async function start() {
+    await connectToDatabase();
+    await loginToDiscord();
+}
+
+function connectToDatabase() {
+    return new Promise((resolve, reject) => {
+        module.exports.connection.connect(error => {
+            if (error) throw error;
+            console.log('Connected to database');
+            resolve();
+        });
+    });
+}
+
+function loginToDiscord() {
+    module.exports.client.on('ready', () => { console.log('Logged in'); });
+    module.exports.client.on('guildCreate', guild => presentationTier.onGuildCreate(guild));
+    module.exports.client.on('message', message => presentationTier.onMessage(message));
+    return module.exports.client.login(settings.token);
+}
