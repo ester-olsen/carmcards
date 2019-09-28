@@ -1,0 +1,11 @@
+{
+    "connection": {
+        "host": "localhost",
+        "database": "carmcards",
+        "user": "root",
+        "password": ""
+    },
+    "token": "",
+    "foilChance": 0.04,
+    "cardsPerPage": 10
+}
