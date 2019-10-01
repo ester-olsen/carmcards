@@ -6,6 +6,7 @@
         "password": ""
     },
     "token": "",
-    "foilChance": 0.04,
-    "cardsPerPage": 10
+    "foilChance": 0.02,
+    "cardsPerPage": 10,
+    "drawCooldown": 86400000
 }

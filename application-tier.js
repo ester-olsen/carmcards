@@ -198,9 +198,8 @@ async function getCardSetById(id) {
 function collectorCanDraw(collector) {
     if (collector.lastDraw) {
         // Check if the difference between now and their last draw is less than one day, all calculated as milliseconds.        
-        const oneDay = 86400000;
         let timeSinceDraw = new Date() - collector.lastDraw;
-        return timeSinceDraw >= oneDay;
+        return timeSinceDraw >= settings.drawCooldown;
     }
 
     return true;
@@ -211,8 +210,7 @@ function getTimeUntilDraw(collector) {
     let timeSinceDraw = new Date() - collector.lastDraw;
 
     // Calculate time until their next draw in milliseconds.
-    const oneDay = 86400000;
-    let remainingTime = oneDay - timeSinceDraw;
+    let remainingTime = settings.drawCooldown - timeSinceDraw;
 
     // Convert remaining time from milliseconds to hours and minutes.
     let hours = Math.floor((remainingTime / (1000 * 60 * 60)) % 24);
