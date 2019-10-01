@@ -121,12 +121,14 @@ async function draw(message) {
             let remainingTime = applicationTier.getTimeUntilDraw(collector);
 
             // Formulate remaining time as a string.
-            let content = `${remainingTime.hours} hours`;
-            if (!remainingTime.hours) content = `${remainingTime.minutes} minutes`;
-            else if (remainingTime.hours == 1) content = `${remainingTime.hours} hours and ${remainingTime.minutes} minutes`;
+            let hours = `${remainingTime.hours} ${remainingTime.hours > 1 ? 'hours' : 'hour'}`;
+            let minutes = `${remainingTime.minutes} ${remainingTime.minutes > 1 ? 'minutes' : 'minute'}`;
+            let content = hours;
+            if (!remainingTime.hours) content = minutes;
+            else if (remainingTime.hours == 1) content = `${hours} and ${minutes}`;
 
             // Send message.
-            message.reply(`there\'s ${content} until your next draw.`);
+            message.reply(`${content} until your next draw.`);
         }
 
         // Cancel the draw command.
