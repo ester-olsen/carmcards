@@ -194,12 +194,10 @@ async function collection(message) {
         }
     }
 
-    // Normalize the page parameter.
+    // Validate and normalize the page parameter.
+    if (page < 1) page = 1;
+    else if (page > pages) page = pages;
     page--;
-
-    // Validate the page parameter.
-    if (page < 0) page = 0;
-    if (page > pages) page = pages - 1;
 
     // Get paginated card information.
     let cardInformationArray = await applicationTier.getPaginatedCardInformation(collector.id, page);
