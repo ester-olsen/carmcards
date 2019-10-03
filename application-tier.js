@@ -25,6 +25,9 @@ module.exports = {
     getPages
 };
 
+// Global variables
+let trades = [];
+
 // Constructor functions
 function Card(id, number, isFoil, imageUrl, cardSetId) {
     this.id = id,
@@ -314,4 +317,44 @@ async function getPages(collectorId) {
 }
 
 // Trade functions
+function addTrade(caller, cardId, responder) {
+    let trade = {
+        caller: {
+            collector: caller,
+            cardId: cardId
+        },
+        responder: {
+            collector: responder,
+            cardId: null
+        }
+    };
 
+    trades.push(trade);
+}
+
+function setTrade(trade) {
+    let index = trades.indexOf(trade);
+    if (index) trades[index] = trade;
+}
+
+function getTrade(caller, responder) {
+    return trades.find(x => x.caller == caller && x.responder == responder);
+}
+
+async function executeTrade(trade) {
+    let cards = await getCards();
+
+    // Transfer caller card
+    let callerCard = cards.find(x => x.id == trade.caller.cardId);
+    await addPossession(trade.responder.collector.id, callerCard.id);
+    await removePossession(trade.caller.collector.id, callerCard.id);
+
+    // Transfer responder card
+    let responderCard = cards.find(x => x.id == trade.responder.cardId);
+    await addPossession(trade.caller.collector.id, responderCard.id);
+    await removePossession(trade.responder.collector.id, responderCard.id);
+
+    // Delete trade item
+    let index = trades.indexOf(trade);
+    trades.splice(index, 1);
+}
