@@ -312,3 +312,6 @@ async function getPages(collectorId) {
     // Return number of pages.
     return pages;
 }
+
+// Trade functions
+
