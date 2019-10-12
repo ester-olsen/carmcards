@@ -388,7 +388,8 @@ async function acceptInvitationToTrade(message) {
 
     // Declare variables.
     let responder = await applicationTier.getCollectorByDiscordId(message.author.id);
-    let cardNumber = content.match(/>\s*\d+/).match(/\d+/);
+    let cardNumber = content.match(/>\s*\d+/);
+    if (cardNumber) cardNumber = cardNumber[0].match(/\d+/); 
     let isFoil = content.match(/foil/).length > 0;
 
     // Validate the state.
@@ -414,7 +415,8 @@ async function acceptInvitationToTrade(message) {
     let caller;
 
     {
-        let discordId = content.match(/<@\d+>/).match(/\d+/);
+        let discordId = content.match(/<@\d+>/);
+        if (discordId) discordId = discordId[0].match(/\d+/);
         caller = await applicationTier.getCollectorByDiscordId(discordId);
     }
 
@@ -452,7 +454,8 @@ async function executeTrade(message) {
     let responder;
 
     {
-        let discordId = content.match(/<@\d+>/).match(/\d+/);
+        let discordId = content.match(/<@\d+>/);
+        if (discordId) discordId = discordId[0].match(/\d+/);
         responder = await applicationTier.getCollectorByDiscordId(discordId);
         if (!responder) return;
     }
