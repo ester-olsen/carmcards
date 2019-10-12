@@ -42,6 +42,7 @@ function onMessage(message) {
     else if (content.match(/^[Dd]raw[\.\!]*$/)) draw(message);
     else if (content.match(/^[Cc]ollections?\s*#?\d*[\.\!]*$/)) collection(message);
     else if (content.match(/^[Hh]elp[\.\!\?]*$/)) help(message);
+    else if (content.match(/^[Tt]rade\s*<@\d+>\s*\d+\s*(foil)?$/)) trade(message);
     else if (content.match(/^\s*$/)) help(message);
 }
 
@@ -261,13 +262,231 @@ function help(message) {
     message.channel.send(richEmbed);
 }
 
+async function trade(message) {
+    // Validate the message.
+    if (!isValidMessage(message)) return;
+
+    // Remove the mention from the message.
+    let content = message.content.substring(`<@${index.client.user.id}>`.length);
+
+    // Get collector.
+    let collector = await applicationTier.getCollectorByDiscordId(message.author.id);
+
+    // Get mentioned collector.
+    let otherCollector;
+
+    {
+        let discordId = content.match(/<@\d+>/);
+        
+        if (discordId) {
+            discordId = discordId[0].match(/\d+/);
+            otherCollector = await applicationTier.getCollectorByDiscordId(discordId);
+        }
+    }
+
+    // Get card.
+    let card;
+
+    {
+        let cardNumber = content.match(/>\s*\d+/);
+        if (cardNumber) cardNumber = cardNumber[0].match(/\d+/);
+        
+        let isFoil = content.match(/foil/) != null;
+
+        card = await applicationTier.getCardByNumber(cardNumber, isFoil);
+    }
+
+    // Validate state.
+    {
+        // Check if the user is a collector.
+        if (!collector) {
+            message.reply('you haven\'t started your collection yet.');
+            return;
+        }
+
+        // Check if the mentioned user is a collector.
+        if (!otherCollector) {
+            message.reply('the user you mentioned hasn\'t started their collection yet.');
+            return;
+        }
+    }
+
+    // Determine action
+    {
+        let trade = applicationTier.getTrade(collector, otherCollector);
+        if (!trade) trade = applicationTier.getTrade(otherCollector, collector);
+
+        if (!trade) {
+            if (card) inviteToTrade(message);
+        }
+        else {
+            if (card && !trade.responder.cardId) acceptInvitationToTrade(message);
+            else if (trade.responder.cardId) executeTrade(message);
+        }
+    }
+}
+
+async function inviteToTrade(message) {
+    // Remove the mention from the message.
+    let content = message.content.substring(`<@${index.client.user.id}>`.length);
+
+    // Declare variables.
+    let caller = await applicationTier.getCollectorByDiscordId(message.author.id);
+    let cardNumber = content.match(/>\s*\d+/);
+    if (cardNumber) cardNumber = cardNumber[0].match(/\d+/);
+    let isFoil = content.match(/foil/);
+    isFoil = isFoil != null;
+    let card = await applicationTier.getCardByNumber(cardNumber, isFoil);
+
+    // Validate the state.
+    {
+        // Check if the user has this card.
+        let cardsOwned = await applicationTier.getCardsOwned(caller.id, cardNumber);
+
+        if (!cardsOwned) {
+            message.reply('you don\'t have a card with that number.');
+            return;
+        }
+
+        // Check if the user has this foil card.
+        let foilCardsOwned = await applicationTier.getFoilCardsOwned(caller.id, cardNumber);
+
+        if (isFoil && !foilCardsOwned) {
+            message.reply('you don\'t have a foil card with that number.');
+            return;
+        }
+    }
+
+    // Get the other user mentioned in the message
+    let responder;
+
+    {
+        let discordId = content.match(/<@\d+>/);
+        if (discordId) discordId = discordId[0].match(/\d+/);
+        responder = await applicationTier.getCollectorByDiscordId(discordId);
+    }
+
+    // Check if the user is a collector.
+    if (!responder) {
+        message.reply('the user you mentioned hasn\'t started a collection yet.');
+        return;
+    }
+
+    // Add trade
+    applicationTier.addTrade(caller, card.id, responder);
+
+    // Send a reply.
+    {
+        let reply = `you have invited <@${responder.discordId}> to trade for your ${isFoil ? 'foil ' : ''}card #${cardNumber}. To accept, they can use the same command mentioning you and the number of a card they want to trade for it.`;
+        message.reply(reply);
+    }
+}
+
+async function acceptInvitationToTrade(message) {
+    // Remove the mention from the message.
+    let content = message.content.substring(`<@${index.client.user.id}>`.length);
+
+    // Declare variables.
+    let responder = await applicationTier.getCollectorByDiscordId(message.author.id);
+    let cardNumber = content.match(/>\s*\d+/).match(/\d+/);
+    let isFoil = content.match(/foil/).length > 0;
+
+    // Validate the state.
+    {
+        // Check if the user has this card.
+        let cardsOwned = await applicationTier.getCardsOwned(responder.id, cardNumber);
+
+        if (!cardsOwned) {
+            message.reply('you don\'t have a card with that number.');
+            return;
+        }
+
+        // Check if the user has this foil card.
+        let foilCardsOwned = await applicationTier.getFoilCardsOwned(responder.id, cardNumber);
+
+        if (isFoil && !foilCardsOwned) {
+            message.reply('you don\'t have a foil card with that number.');
+            return;
+        }
+    }
+
+    // Get user who sent the invitation.
+    let caller;
+
+    {
+        let discordId = content.match(/<@\d+>/).match(/\d+/);
+        caller = await applicationTier.getCollectorByDiscordId(discordId);
+    }
+
+    // Update the trade.
+    {
+        let trade = applicationTier.getTrade(caller, responder);
+        let card = await applicationTier.getCardByNumber(cardNumber, isFoil);
+        trade.responder.cardId = card.id;
+        applicationTier.setTrade(trade);
+    }
+
+    // Send a message
+    {
+        // Formulate a title.
+        let title = 'Accepted trade invitation'
+
+        // Formulate a description.
+        let description = `<@${responder.discordId}>, you have offered to trade your ${isFoil ? 'foil ' : ''}card #${cardNumber} for <@${responder.discordId}>'s foil card #1. To execute this trade, they can use the trade command mentioning you.`;
+
+        // Create an embed.
+        let richEmbed = new discord.RichEmbed();
+        richEmbed.setTitle(title);
+        richEmbed.setDescription(description);
+
+        // Send message.
+        message.channel.send(richEmbed);
+    }
+}
+
+async function executeTrade(message) {
+    // Get caller.
+    let caller = await applicationTier.getCollectorByDiscordId(message.author.id);
+
+    // Get responder.
+    let responder;
+
+    {
+        let discordId = content.match(/<@\d+>/).match(/\d+/);
+        responder = await applicationTier.getCollectorByDiscordId(discordId);
+        if (!responder) return;
+    }
+
+    // Execute trade.
+    let trade = applicationTier.getTrade(caller, responder);
+    if (!trade) return;
+    await applicationTier.executeTrade(trade);
+
+    // Send a message
+    {
+        // Formulate a title.
+        let title = 'Executed trade'
+
+        // Formulate a description.
+        let callerCard = await applicationTier.getCardById(trade.caller.cardId);
+        let responderCard = await applicationTier.getCardById(trade.responder.cardId);
+        let description = `<@${caller.discordId}>, you have traded your ${callerCard.isFoil ? 'foil ' : ''}card #${callerCard.number} for Zett's ${responderCard.isFoil ? 'foil ' : ''}card #${responderCard.number}.`;
+
+        // Create an embed.
+        let richEmbed = new discord.RichEmbed();
+        richEmbed.setTitle(title);
+        richEmbed.setDescription(description);
+
+        // Send message.
+        message.channel.send(richEmbed);
+    }
+}
+
 // Functions
 function isValidMessage(message) {
     // Check if the user is a bot, or if it's a message from this bot to itself.
     if (message.author.bot) {
-        if (message.author.id != index.client.user.id) {
-            return false;
-        }
+        if (message.author.id != index.client.user.id) return false;
     }
 
     // Check if the user mentioned this bot.

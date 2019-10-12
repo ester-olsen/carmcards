@@ -22,7 +22,12 @@ module.exports = {
     getTimeUntilDraw,
     getPaginatedCardInformation,
     collectorHasCards,
-    getPages
+    getPages,
+    addTrade,
+    setTrade,
+    getTrade,
+    executeTrade,
+    getCardById
 };
 
 // Global variables
@@ -316,6 +321,11 @@ async function getPages(collectorId) {
     return pages;
 }
 
+async function getCardById(id) {
+    let cards = await getCards();
+    return cards.find(card => card.id == id);
+}
+
 // Trade functions
 function addTrade(caller, cardId, responder) {
     let trade = {
@@ -334,11 +344,11 @@ function addTrade(caller, cardId, responder) {
 
 function setTrade(trade) {
     let index = trades.indexOf(trade);
-    if (index) trades[index] = trade;
+    if (index > -1) trades[index] = trade;
 }
 
 function getTrade(caller, responder) {
-    return trades.find(x => x.caller == caller && x.responder == responder);
+    return trades.find(trade => trade.caller == caller && trade.responder == responder);
 }
 
 async function executeTrade(trade) {
